@@ -64,8 +64,7 @@ void loop() {
   // read temperature
   // changing to more stable internal 1.1V
   analogReference(INTERNAL);
-  int reading = analogRead(A0);
-  
+  float reading = analogRead(A0);
 
   // converting temperature to hue
   double VOut = reading * (1.1/1024.0) * 1000;
