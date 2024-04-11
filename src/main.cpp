@@ -1,6 +1,26 @@
 #include <Arduino.h>
-#include "RGBConverter.h"
+#include "RGBConverter.h" // external library
 
+// Struct declarations
+typedef struct rgb {
+  int red, green, blue;
+} RGB;
+
+// function declarations
+
+RGB COLORS[3];
+int COLORPIN[3];
+RGB colorInit(int red, int green, int blue);
+void rgbOn(RGB rgb);
+void crossFade(int pin1, int pin2, int lag);
+void fadeOn(int pin, int power, int lag);
+bool readButtonInput(int button);
+void rgbFadeOn(int r, int g, int b);
+void rgbOff();
+float customMap(long x, float in_min, float in_max, float out_min, float out_max);
+RGB temp_to_rgb(long hue_large);
+
+// Global variables
 char colors[] = {'r', 'g', 'b'};
 int PINRED = 6;
 int PINGREEN = 5;
@@ -15,24 +35,6 @@ RGBConverter _rgbconverter;
 double hsl[3];
 byte rgb[3];
 
-// rgb color struct
-typedef struct rgb {
-  int red, green, blue;
-} RGB;
-
-RGB COLORS[3];
-int COLORPIN[3];
-RGB colorInit(int red, int green, int blue);
-void rgbOn(RGB rgb);
-void crossFade(int pin1, int pin2, int lag);
-void fadeOn(int pin, int power, int lag);
-bool readButtonInput(int button);
-void rgbFadeOn(int r, int g, int b);
-void rgbOff();
-float customMap(long x, float in_min, float in_max, float out_min, float out_max);
-RGB temp_to_rgb(long hue_large);
-
-
 
 
 void setup() {
@@ -41,38 +43,47 @@ void setup() {
   pinMode(PINGREEN, OUTPUT);
   pinMode(PINBLUE, OUTPUT);
   pinMode(MODEBUTTON, INPUT);
-  Serial.begin(9600);
   pinMode(COLORBUTTON, INPUT); // Color change button
+  Serial.begin(9600); // serial beegin
+  
   // initialize color
   COLORINDEX = 0;
   COLORPIN[0] = PINRED;
   COLORPIN[1] = PINGREEN;
   COLORPIN[2] = PINBLUE;
+
+  // initial color
   analogWrite(COLORPIN[0], BRIGHTNESS);
+
+  // hsl configuration
   hsl[0] = 0.5;
   hsl[1] = 1.0;
   hsl[2] = 0.5;
 }
 
 void loop() {
-  // test rgb on
-  //test
+  // read temperature
+  analogReference(INTERNAL);
+  int reading = analogRead(A0);
+  
 
-  int reading = analogRead(A0); // read temperature
-  double VOut = reading * (5/1024.0) * 100;
-  // convert reading to hue
-  long hue_large = map(VOut, 60, 75, 0, 360);
+  // converting temperature to hue
+  double VOut = reading * (1.1/1024.0) * 1000;
+  // VOut = constrain(VOut, 100, 150);
+  long hue_large = map(VOut, 180, 210, 0, 360);
   float hue = customMap(hue_large,0.0,360.0, 0.4, 0);
-  Serial.print("hue: ");
-  Serial.println(hue_large);
-  Serial.print("VOut: ");
+  //Serial.print("hue: ");
+  //Serial.println(hue_large);
+  //Serial.print("VOut: ");
   Serial.println(VOut);
   // double temp = (VOut - 0.5) * 100;
 
+  analogReference(DEFAULT);
   int photoresistorvalue = analogRead(A1);
-  Serial.println(photoresistorvalue);
-  photoresistorvalue = constrain(photoresistorvalue, 200, 650);
-  BRIGHTNESS = map(photoresistorvalue, 200, 650, 30, 255);
+  photoresistorvalue = constrain(photoresistorvalue, 200, 800);
+
+  // brightness inversely proportional to light
+  BRIGHTNESS = map(photoresistorvalue, 200, 800, 255, 30);
 
   // convert hsl to rgb
   hsl[0] = hue;
@@ -101,29 +112,10 @@ void loop() {
   analogWrite(COLORPIN[COLORINDEX], BRIGHTNESS);
   //mode 2 : temperature mode
   if (!MODE) {
-    /*
-    if (temp < 22) {
-      rgbOn(colorInit(0,0,BRIGHTNESS));
-    } else if (temp > 25) {
-      rgbOn(colorInit(BRIGHTNESS,0,0));
-    } else {
-      rgbOn(colorInit(0,BRIGHTNESS,0));
-    }
-    */
-   RGB color = temp_to_rgb(hue_large);
+    RGB color = temp_to_rgb(hue_large);
     rgbOn(colorInit(rgb[0], rgb[1], rgb[2]));
-    Serial.print(color.red);
-    Serial.print(" ");
-    Serial.print(color.green);
-    Serial.print(" ");
-    Serial.print(color.blue);
-    Serial.println("");
-
   }
-
-
 }
-// put function definitions here:
 
 // turn on rgb.
 // Arguments : 
@@ -178,7 +170,12 @@ void crossFade(int pin1, int pin2, int lag) {
   }
 }
 
-
+// Read button inputs
+// Arguments :
+// button : button pin number
+// Return
+// true if button pressed
+// false otherwise
 bool readButtonInput(int button) {
   if (digitalRead(button) == HIGH) {
     Serial.println("BUTTON PRESSED");
@@ -187,12 +184,14 @@ bool readButtonInput(int button) {
   return false;
 }
 
+// turn off led
 void rgbOff() {
   analogWrite(PINRED, 0);
   analogWrite(PINGREEN, 0);
   analogWrite(PINBLUE, 0);
 }
 
+// initialize RGB object
 RGB colorInit(int red, int green, int blue) {
   RGB color;
   color.red = red;
@@ -201,9 +200,11 @@ RGB colorInit(int red, int green, int blue) {
   return color;
 }
 
+// Custom mapping for float based on arduino map()
 float customMap(long x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
+
 
 RGB temp_to_rgb(long hue_large) {
   float red = (255 / 360) * hue_large;
