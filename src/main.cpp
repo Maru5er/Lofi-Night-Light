@@ -68,9 +68,11 @@ void loop() {
 
   // converting temperature to hue
   double VOut = reading * (1.1/1024.0) * 1000;
-  // VOut = constrain(VOut, 100, 150);
-  long hue_large = map(VOut, 180, 210, 0, 360);
-  float hue = customMap(hue_large, 0.0, 360.0, 0.4, 0);
+  //Serial.println(VOut);
+  //delay(100);
+  VOut = constrain(VOut, 185, 220);
+  long hue_large = map(VOut, 185, 220, 0, 360);
+  float hue = customMap(hue_large, 0.0, 360.0, 0.60, 0);
 
   // change to default 5V reference
   analogReference(DEFAULT);
