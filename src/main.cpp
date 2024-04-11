@@ -18,7 +18,6 @@ bool readButtonInput(int button);
 void rgbFadeOn(int r, int g, int b);
 void rgbOff();
 float customMap(long x, float in_min, float in_max, float out_min, float out_max);
-RGB temp_to_rgb(long hue_large);
 
 // Global variables
 char colors[] = {'r', 'g', 'b'};
@@ -63,6 +62,7 @@ void setup() {
 
 void loop() {
   // read temperature
+  // changing to more stable internal 1.1V
   analogReference(INTERNAL);
   int reading = analogRead(A0);
   
@@ -71,13 +71,9 @@ void loop() {
   double VOut = reading * (1.1/1024.0) * 1000;
   // VOut = constrain(VOut, 100, 150);
   long hue_large = map(VOut, 180, 210, 0, 360);
-  float hue = customMap(hue_large,0.0,360.0, 0.4, 0);
-  //Serial.print("hue: ");
-  //Serial.println(hue_large);
-  //Serial.print("VOut: ");
-  Serial.println(VOut);
-  // double temp = (VOut - 0.5) * 100;
+  float hue = customMap(hue_large, 0.0, 360.0, 0.4, 0);
 
+  // change to default 5V reference
   analogReference(DEFAULT);
   int photoresistorvalue = analogRead(A1);
   photoresistorvalue = constrain(photoresistorvalue, 200, 800);
@@ -89,7 +85,7 @@ void loop() {
   hsl[0] = hue;
   _rgbconverter.hslToRgb(hsl[0], hsl[1], hsl[2], rgb);
   
-
+  // read mode button
   if (readButtonInput(MODEBUTTON)) {
     MODE = !MODE;
     if (MODE) {
@@ -112,7 +108,6 @@ void loop() {
   analogWrite(COLORPIN[COLORINDEX], BRIGHTNESS);
   //mode 2 : temperature mode
   if (!MODE) {
-    RGB color = temp_to_rgb(hue_large);
     rgbOn(colorInit(rgb[0], rgb[1], rgb[2]));
   }
 }
@@ -205,9 +200,3 @@ float customMap(long x, float in_min, float in_max, float out_min, float out_max
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-
-RGB temp_to_rgb(long hue_large) {
-  float red = (255 / 360) * hue_large;
-  float blue = (-255 / 360) * hue_large;
-  return colorInit(red, 125, blue);
-}
